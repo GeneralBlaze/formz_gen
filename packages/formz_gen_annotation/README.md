@@ -12,4 +12,33 @@ dev_dependencies:
   formz_gen: ^0.1.0
 ```
 
-Exports `FormzForm`, `NotEmpty`, `MinLength`, `MaxLength`, `Matches`, `Range`, `SameAs` and `Validate`. What each one generates, the error member it produces and the build-time checks are documented in the [formz_gen README](https://pub.dev/packages/formz_gen).
+```dart
+import 'package:formz/formz.dart';
+import 'package:formz_gen_annotation/formz_gen_annotation.dart';
+
+part 'sign_up_form.g.dart';
+
+const emailPattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$';
+
+bool isNotReserved(String value) => value != 'admin';
+
+@FormzForm(events: true)
+abstract class SignUpForm {
+  @NotEmpty()
+  @Matches(emailPattern)
+  String get email;
+
+  @MinLength(8)
+  @MaxLength(64)
+  @Validate(isNotReserved)
+  String get password;
+
+  @SameAs(#password)
+  String get confirmPassword;
+
+  @Range(min: 13, max: 120)
+  int get age;
+}
+```
+
+Then `dart run build_runner build`. The generated `sign_up_form.g.dart` holds `Email`, `Password`, `ConfirmPassword` and `Age` inputs, their error enums, `SignUpFormState`, and (with `events: true`) `SignUpFormEvent` plus `SignUpFormState.apply`. What each annotation generates, the error member it produces and the build-time checks are documented in the [formz_gen README](https://pub.dev/packages/formz_gen).

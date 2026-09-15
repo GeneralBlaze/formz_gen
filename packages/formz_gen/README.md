@@ -97,9 +97,9 @@ For `@FormzForm() abstract class ProfileForm` with a getter `String get handle`:
 | Cross-field getters (only for fields with `@SameAs`) | `confirmPasswordError`, `confirmPasswordDisplayError` |
 | Events and reducer (only with `events: true`) | `ProfileFormEvent`, `ProfileFormHandleChanged`, `ProfileFormState.apply` |
 
-Field types: `String`, `int`, `double`, `num`, `bool`, or a nullable version of them. Pure defaults are `''`, `0`, `0.0`, `0`, `false` and `null`. Getters inherited from a superclass or mixin are included, in superclass, mixin, own order.
+Field types: `String`, `int`, `double`, `num`, `bool`, or a nullable version of them. Pure defaults are `''`, `0`, `0.0`, `0`, `false` and `null`. Getters inherited from a superclass or mixin are included, in superclass, mixin, own order, with the superclass's type arguments substituted; getters from `implements` clauses are not.
 
-Field names that the generated state already uses are rejected at build time: `error`, `other`, `inputs`, `isValid`, `isNotValid`, `isPure`, `isDirty`, `copyWith`, `apply`, `hashCode`, `runtimeType`, `toString`, `noSuchMethod`.
+Field names that the generated state already uses are rejected at build time: `error`, `other`, `identical`, `inputs`, `isValid`, `isNotValid`, `isPure`, `isDirty`, `copyWith`, `apply`, `hashCode`, `runtimeType`, `toString`, `noSuchMethod`, and any name equal to another field's `<field>Error` or `<field>DisplayError` getter.
 
 ## Validators
 
@@ -115,7 +115,7 @@ Field names that the generated state already uses are rejected at build time: `e
 
 Arguments are copied into the generated code as written, so `@Matches(handlePattern)` references your constant instead of inlining it.
 
-`@Validate` takes a top-level function or a static method with the signature `bool Function(T value)`; the error member is named after the function, so renaming the function renames the enum member. The generator checks the reference at build time: it must return `bool` and accept the field's type as its only parameter. Two validators on one field that produce the same error member (two `@Matches`, or `@Validate(mismatch)` next to `@SameAs`) are rejected, as are `@NotEmpty`/`@MinLength`/`@MaxLength`/`@Matches` on non-`String` fields, `@Range` on non-`num` fields, and fractional `@Range` bounds on an `int` field.
+`@Validate` takes a top-level function or a static method with the signature `bool Function(T value)`; the error member is named after the function, so renaming the function renames the enum member. The generator checks the reference at build time: it must return `bool` and accept the field's type as its only parameter. Two validators on one field that produce the same error member (two `@Matches`, or `@Validate(mismatch)` next to `@SameAs`) are rejected, as are `@NotEmpty`/`@MinLength`/`@MaxLength`/`@Matches` on fields that are not a non-nullable `String`, `@Range` on fields that are not a non-nullable `num` (use `@Validate` with a nullable-accepting function for optional fields), and fractional `@Range` bounds on an `int` field.
 
 ## Cross-field validation
 
