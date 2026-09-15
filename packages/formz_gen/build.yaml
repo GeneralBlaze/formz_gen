@@ -1,0 +1,7 @@
+builders:
+  formz_gen:
+    import: "package:formz_gen/builder.dart"
+    builder_factories: ["formzBuilder"]
+    build_extensions: {".dart": [".g.dart"]}
+    auto_apply: dependents
+    build_to: source
