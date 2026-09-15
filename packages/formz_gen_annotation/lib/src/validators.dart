@@ -1,48 +1,39 @@
-import 'package:meta/meta.dart';
-
-@immutable
-class NotEmpty {
+final class NotEmpty {
   const NotEmpty();
 }
 
-@immutable
-class MinLength {
+final class MinLength {
   const MinLength(this.length);
 
   final int length;
 }
 
-@immutable
-class MaxLength {
+final class MaxLength {
   const MaxLength(this.length);
 
   final int length;
 }
 
-@immutable
-class Matches {
+final class Matches {
   const Matches(this.pattern);
 
   final String pattern;
 }
 
-@immutable
-class Range {
+final class Range {
   const Range({required this.min, required this.max});
 
   final num min;
   final num max;
 }
 
-@immutable
-class SameAs {
+final class SameAs {
   const SameAs(this.field);
 
   final Symbol field;
 }
 
-@immutable
-class Validate {
+final class Validate {
   const Validate(this.validator);
 
   final Function validator;

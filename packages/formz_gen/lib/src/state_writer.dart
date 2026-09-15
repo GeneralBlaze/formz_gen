@@ -112,15 +112,17 @@ String _apply(FormSpec form) {
 }
 
 String _equality(FormSpec form) {
-  final names = form.fields.map((f) => f.name);
-  final comparisons = names.map((n) => 'other.$n == $n').join(' && ');
+  final names = form.fields.map((f) => f.name).toList();
+  final comparisons = [
+    'other is ${form.stateName}',
+    ...names.map((n) => 'other.$n == $n'),
+  ].join(' && ');
   return '''
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ${form.stateName} && $comparisons;
+      identical(this, other) || $comparisons;
 
   @override
-  int get hashCode => Object.hash(${names.join(', ')});
+  int get hashCode => Object.hashAll([${names.join(', ')}]);
 ''';
 }

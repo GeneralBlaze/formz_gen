@@ -107,5 +107,5 @@ class SignUpFormState with FormzMixin {
           other.confirmPassword == confirmPassword;
 
   @override
-  int get hashCode => Object.hash(email, password, confirmPassword);
+  int get hashCode => Object.hashAll([email, password, confirmPassword]);
 }

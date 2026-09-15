@@ -129,7 +129,7 @@ class ProfileFormState with FormzMixin {
           other.bio == bio;
 
   @override
-  int get hashCode => Object.hash(displayName, handle, age, bio);
+  int get hashCode => Object.hashAll([displayName, handle, age, bio]);
 }
 
 sealed class ProfileFormEvent {

@@ -3,6 +3,7 @@ import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:formz_gen/src/annotation_args.dart';
 import 'package:formz_gen/src/form_spec.dart';
+import 'package:formz_gen/src/validator_checks.dart';
 import 'package:formz_gen/src/validator_spec.dart';
 import 'package:formz_gen_annotation/formz_gen_annotation.dart';
 import 'package:source_gen/source_gen.dart';
@@ -24,6 +25,22 @@ const _pureValues = {
   'bool': 'false',
 };
 
+const reservedFieldNames = {
+  'error',
+  'other',
+  'inputs',
+  'isValid',
+  'isNotValid',
+  'isPure',
+  'isDirty',
+  'copyWith',
+  'apply',
+  'hashCode',
+  'runtimeType',
+  'toString',
+  'noSuchMethod',
+};
+
 FormSpec readForm(Element element, ConstantReader annotation) {
   if (element is! ClassElement || !element.isAbstract) {
     throw InvalidGenerationSourceError(
@@ -32,8 +49,8 @@ FormSpec readForm(Element element, ConstantReader annotation) {
     );
   }
   final fields = [
-    for (final getter in element.getters)
-      if (!getter.isStatic) _readField(getter),
+    for (final getter in _declaredAndInheritedGetters(element))
+      _readField(getter),
   ];
   final names = fields.map((f) => f.name).toSet();
   for (final field in fields) {
@@ -53,7 +70,36 @@ FormSpec readForm(Element element, ConstantReader annotation) {
   );
 }
 
+List<GetterElement> _declaredAndInheritedGetters(ClassElement element) {
+  final byName = <String, GetterElement>{};
+  final supertype = element.supertype;
+  if (supertype != null && !supertype.isDartCoreObject) {
+    final parent = supertype.element;
+    if (parent is ClassElement) {
+      for (final getter in _declaredAndInheritedGetters(parent)) {
+        byName[getter.name!] = getter;
+      }
+    }
+  }
+  for (final mixin in element.mixins) {
+    for (final getter in mixin.element.getters) {
+      if (!getter.isStatic) byName[getter.name!] = getter;
+    }
+  }
+  for (final getter in element.getters) {
+    if (!getter.isStatic) byName[getter.name!] = getter;
+  }
+  return byName.values.toList();
+}
+
 FieldSpec _readField(GetterElement getter) {
+  final name = getter.name!;
+  if (reservedFieldNames.contains(name)) {
+    throw InvalidGenerationSourceError(
+      '`$name` is reserved by the generated state and cannot be a field.',
+      element: getter,
+    );
+  }
   final type = getter.returnType;
   final typeName = type.getDisplayString();
   final pureValue = _pureValueFor(type, typeName, getter);
@@ -69,16 +115,19 @@ FieldSpec _readField(GetterElement getter) {
     }
     final args = AnnotationArgs.parse(meta.toSource());
     final spec = _validatorFor(valueType, args);
-    if (spec != null) validators.add(spec);
+    if (spec == null) continue;
+    checkValidatorAgainstField(spec, value, getter);
+    validators.add(spec);
   }
-  _rejectDuplicateMembers(getter, validators);
-  return FieldSpec(
-    name: getter.name!,
+  final field = FieldSpec(
+    name: name,
     type: typeName,
     pureValue: pureValue,
     validators: validators,
     sameAs: sameAs,
   );
+  rejectInvalidErrorMembers(field, getter);
+  return field;
 }
 
 ValidatorSpec? _validatorFor(DartType type, AnnotationArgs args) {
@@ -104,20 +153,4 @@ String _pureValueFor(DartType type, String typeName, GetterElement getter) {
     );
   }
   return pureValue;
-}
-
-void _rejectDuplicateMembers(
-  GetterElement getter,
-  List<ValidatorSpec> validators,
-) {
-  final seen = <String>{};
-  for (final validator in validators) {
-    if (!seen.add(validator.errorMember)) {
-      throw InvalidGenerationSourceError(
-        'Two validators on `${getter.name}` both produce '
-        '`${validator.errorMember}`.',
-        element: getter,
-      );
-    }
-  }
 }

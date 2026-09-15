@@ -1,7 +1,4 @@
-import 'package:meta/meta.dart';
-
-@immutable
-class FormzForm {
+final class FormzForm {
   const FormzForm({this.events = false});
 
   final bool events;
