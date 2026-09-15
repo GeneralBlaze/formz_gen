@@ -4,6 +4,7 @@ import 'golden_helpers.dart';
 
 void main() {
   reservedNames();
+  roundTwo();
   group('readForm rejects', () {
     test('a concrete class', () async {
       final build = await buildSource('''
@@ -119,7 +120,10 @@ void reservedNames() {
         formSource('  @NotEmpty()\n  int get count;'),
       );
       expect(build.output, isEmpty);
-      expect(build.logs.join(), contains('@NotEmpty requires a String field'));
+      expect(
+        build.logs.join(),
+        contains('@NotEmpty requires a non-nullable String field'),
+      );
     });
 
     test('Range on a String field', () async {
@@ -127,7 +131,10 @@ void reservedNames() {
         formSource('  @Range(min: 1, max: 2)\n  String get name;'),
       );
       expect(build.output, isEmpty);
-      expect(build.logs.join(), contains('@Range requires a num field'));
+      expect(
+        build.logs.join(),
+        contains('@Range requires a non-nullable num field'),
+      );
     });
 
     test('Range with fractional bounds on an int field', () async {
@@ -156,5 +163,54 @@ void reservedNames() {
         expect(build.logs.join(), contains('must accept String'));
       },
     );
+  });
+}
+
+void roundTwo() {
+  group('readForm rejects built-in validators on nullable fields', () {
+    test('NotEmpty on String?', () async {
+      final build = await buildSource(
+        formSource('  @NotEmpty()\n  String? get name;'),
+      );
+      expect(build.output, isEmpty);
+      expect(
+        build.logs.join(),
+        contains('@NotEmpty requires a non-nullable String field'),
+      );
+    });
+
+    test('Range on int?', () async {
+      final build = await buildSource(
+        formSource('  @Range(min: 1, max: 2)\n  int? get count;'),
+      );
+      expect(build.output, isEmpty);
+      expect(
+        build.logs.join(),
+        contains('@Range requires a non-nullable num field'),
+      );
+    });
+  });
+
+  group('readForm rejects generated-name collisions', () {
+    test('a field named identical', () async {
+      final build = await buildSource(formSource('  String get identical;'));
+      expect(build.output, isEmpty);
+      expect(build.logs.join(), contains('`identical` is reserved'));
+    });
+
+    test("a field named like another field's error getter", () async {
+      final build = await buildSource(
+        formSource(
+          '  String get a;\n'
+          '  @SameAs(#a)\n  String get b;\n'
+          '  String get bError;',
+        ),
+      );
+      expect(build.output, isEmpty);
+      expect(
+        build.logs.join(),
+        contains('`bError` collides with a generated member'),
+      );
+    });
   });
 }

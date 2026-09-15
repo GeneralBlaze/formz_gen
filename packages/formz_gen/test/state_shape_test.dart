@@ -3,6 +3,7 @@ import 'package:test/test.dart';
 import 'golden_helpers.dart';
 
 void main() {
+  genericSuperclass();
   group('generated state', () {
     test('hashes a single field with Object.hashAll', () async {
       final out = await generateSource(formSource('  String get note;'));
@@ -67,5 +68,26 @@ abstract class Form extends Base with Extra {
       expect(out, contains('get inputs => [name, count, note];'));
       expect(out, contains('enum NameError { empty }'));
     });
+  });
+}
+
+void genericSuperclass() {
+  test('substitutes type arguments of a generic superclass', () async {
+    final out = await generateSource('''
+import 'package:formz/formz.dart';
+import 'package:formz_gen_annotation/formz_gen_annotation.dart';
+
+part 'form.g.dart';
+
+abstract class Base<T> {
+  T get value;
+}
+
+@FormzForm()
+abstract class Form extends Base<int> {
+  String get note;
+}
+''');
+    expect(out, contains('class Value extends FormzInput<int, Never>'));
   });
 }
