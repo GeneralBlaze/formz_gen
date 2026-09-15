@@ -1,0 +1,16 @@
+name: formz_gen_annotation
+description: Annotations for formz_gen, the build_runner generator that emits formz inputs, error enums and form state from one abstract class.
+version: 0.1.0
+repository: https://github.com/GeneralBlaze/formz_gen
+issue_tracker: https://github.com/GeneralBlaze/formz_gen/issues
+
+environment:
+  sdk: ^3.12.0
+resolution: workspace
+
+dependencies:
+  meta: ^1.16.0
+
+dev_dependencies:
+  test: ^1.25.0
+  very_good_analysis: ^10.3.0

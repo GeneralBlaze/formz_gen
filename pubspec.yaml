@@ -1,0 +1,10 @@
+name: formz_gen_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+workspace:
+  - packages/formz_gen_annotation
+  - packages/formz_gen
+  - packages/formz_gen/example
