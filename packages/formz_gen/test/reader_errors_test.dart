@@ -3,6 +3,7 @@ import 'package:test/test.dart';
 import 'golden_helpers.dart';
 
 void main() {
+  reservedNames();
   group('readForm rejects', () {
     test('a concrete class', () async {
       final build = await buildSource('''
@@ -66,5 +67,94 @@ class Form {}
       expect(out, isNot(contains('Label')));
       expect(out, contains('enum NameError { empty }'));
     });
+  });
+}
+
+void reservedNames() {
+  group('readForm rejects reserved names', () {
+    test('a field named error', () async {
+      final build = await buildSource(formSource('  String get error;'));
+      expect(build.output, isEmpty);
+      expect(build.logs.join(), contains('`error` is reserved'));
+    });
+
+    test('a field named other', () async {
+      final build = await buildSource(formSource('  String get other;'));
+      expect(build.output, isEmpty);
+      expect(build.logs.join(), contains('`other` is reserved'));
+    });
+
+    test('a field named inputs', () async {
+      final build = await buildSource(formSource('  String get inputs;'));
+      expect(build.output, isEmpty);
+      expect(build.logs.join(), contains('`inputs` is reserved'));
+    });
+
+    test('a Validate function named mismatch next to SameAs', () async {
+      final build = await buildSource(
+        formSource(
+          '  String get a;\n'
+          '  @SameAs(#a)\n  @Validate(mismatch)\n  String get b;',
+        ),
+      );
+      expect(build.output, isEmpty);
+      expect(
+        build.logs.join(),
+        contains('Two validators on `b` both produce `mismatch`.'),
+      );
+    });
+
+    test('a Validate function named values', () async {
+      final build = await buildSource(
+        formSource('  @Validate(values)\n  String get a;'),
+      );
+      expect(build.output, isEmpty);
+      expect(build.logs.join(), contains('`values` cannot be an enum member'));
+    });
+  });
+
+  group('readForm checks validator types', () {
+    test('NotEmpty on a non-String field', () async {
+      final build = await buildSource(
+        formSource('  @NotEmpty()\n  int get count;'),
+      );
+      expect(build.output, isEmpty);
+      expect(build.logs.join(), contains('@NotEmpty requires a String field'));
+    });
+
+    test('Range on a String field', () async {
+      final build = await buildSource(
+        formSource('  @Range(min: 1, max: 2)\n  String get name;'),
+      );
+      expect(build.output, isEmpty);
+      expect(build.logs.join(), contains('@Range requires a num field'));
+    });
+
+    test('Range with fractional bounds on an int field', () async {
+      final build = await buildSource(
+        formSource('  @Range(min: 0.5, max: 10)\n  int get count;'),
+      );
+      expect(build.output, isEmpty);
+      expect(build.logs.join(), contains('@Range bounds on an int field'));
+    });
+
+    test('Validate with a function that does not return bool', () async {
+      final build = await buildSource(
+        formSource('  @Validate(shout)\n  String get name;'),
+      );
+      expect(build.output, isEmpty);
+      expect(build.logs.join(), contains('must return bool'));
+    });
+
+    test(
+      'Validate with a function whose parameter rejects the field',
+      () async {
+        final build = await buildSource(
+          formSource('  @Validate(isEven)\n  String get name;'),
+        );
+        expect(build.output, isEmpty);
+        expect(build.logs.join(), contains('must accept String'));
+      },
+    );
   });
 }

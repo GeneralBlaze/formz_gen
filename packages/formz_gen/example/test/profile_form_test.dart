@@ -10,7 +10,9 @@ void main() {
           .apply(const ProfileFormAgeChanged(36))
           .apply(const ProfileFormBioChanged('Analytical engines.'));
       expect(state.isDirty, isTrue);
+      expect(state.isPure, isFalse);
       expect(state.isValid, isTrue);
+      expect(state.handle, const Handle.dirty('ada_l'));
     });
 
     test('runs the custom validator after the built-ins', () {

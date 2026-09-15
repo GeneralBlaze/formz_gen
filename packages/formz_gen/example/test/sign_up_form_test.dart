@@ -1,6 +1,8 @@
 import 'package:formz_gen_example/sign_up_form.dart';
 import 'package:test/test.dart';
 
+String runtimeValue() => String.fromCharCode(120);
+
 void main() {
   group('SignUpFormState', () {
     test('starts pure and invalid', () {
@@ -38,15 +40,35 @@ void main() {
       expect(fixed.isValid, isTrue);
     });
 
-    test('is equal by value', () {
-      expect(
-        const SignUpFormState(email: Email.dirty('x')),
-        const SignUpFormState(email: Email.dirty('x')),
+    test('surfaces a mismatch when password changes after confirmation', () {
+      final confirmed = const SignUpFormState().copyWith(
+        password: const Password.dirty('password1'),
+        confirmPassword: const ConfirmPassword.dirty('password1'),
       );
-      expect(
-        const SignUpFormState(email: Email.dirty('x')).hashCode,
-        const SignUpFormState(email: Email.dirty('x')).hashCode,
+      expect(confirmed.confirmPasswordError, isNull);
+
+      final changed = confirmed.copyWith(
+        password: const Password.dirty('password2'),
       );
+      expect(changed.confirmPasswordError, ConfirmPasswordError.mismatch);
+      expect(
+        changed.confirmPasswordDisplayError,
+        ConfirmPasswordError.mismatch,
+      );
+    });
+
+    test('is equal by value, not identity', () {
+      final a = SignUpFormState(email: Email.dirty(runtimeValue()));
+      final b = SignUpFormState(email: Email.dirty(runtimeValue()));
+      expect(identical(a, b), isFalse);
+      expect(a, equals(b));
+      expect(a.hashCode, b.hashCode);
+      expect(a, isNot(equals(a.copyWith(email: const Email.dirty('y')))));
+    });
+
+    test('copyWith without arguments returns an equal state', () {
+      final state = SignUpFormState(email: Email.dirty(runtimeValue()));
+      expect(state.copyWith(), equals(state));
     });
   });
 }

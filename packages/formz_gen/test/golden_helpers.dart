@@ -11,28 +11,31 @@ Future<String> generateFor(String fileName) async {
   return generateSource(source, fileName: fileName);
 }
 
-Future<String> generateSource(
-  String source, {
-  String fileName = 'form',
-}) async {
+Future<String> generateSource(String source, {String? fileName}) async {
   final build = await buildSource(source, fileName: fileName);
   return build.output;
 }
 
-Future<BuildOutcome> buildSource(
-  String source, {
-  String fileName = 'form',
-}) async {
-  final inputId = AssetId(examplePackage, 'lib/$fileName.dart');
-  final outputId = AssetId(examplePackage, 'lib/$fileName.g.dart');
-  final readerWriter = TestReaderWriter(rootPackage: examplePackage);
-  await readerWriter.testing.loadIsolateSources();
+int _builds = 0;
+Future<TestReaderWriter>? _sharedReaderWriter;
+
+Future<TestReaderWriter> _loadedReaderWriter() =>
+    _sharedReaderWriter ??= () async {
+      final readerWriter = TestReaderWriter(rootPackage: examplePackage);
+      await readerWriter.testing.loadIsolateSources();
+      return readerWriter;
+    }();
+
+Future<BuildOutcome> buildSource(String source, {String? fileName}) async {
+  final name = fileName ?? 'form_${_builds++}';
+  final inputId = AssetId(examplePackage, 'lib/$name.dart');
+  final outputId = AssetId(examplePackage, 'lib/$name.g.dart');
   final logs = <String>[];
   final result = await testBuilder(
     formzBuilder(BuilderOptions.empty),
-    {inputId.toString(): source},
+    {inputId.toString(): source.replaceAll("'form.g.dart'", "'$name.g.dart'")},
     rootPackage: examplePackage,
-    readerWriter: readerWriter,
+    readerWriter: await _loadedReaderWriter(),
     flattenOutput: true,
     onLog: (record) => logs.add(record.message),
   );
@@ -63,6 +66,12 @@ part 'form.g.dart';
 const pattern = r'^\\d+\$';
 
 bool isEven(int value) => value.isEven;
+
+bool mismatch(String value) => true;
+
+bool values(String value) => true;
+
+String shout(String value) => value.toUpperCase();
 
 class Rules {
   static bool noSpaces(String value) => !value.contains(' ');
