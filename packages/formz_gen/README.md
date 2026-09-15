@@ -4,7 +4,7 @@ Code generation for [formz](https://pub.dev/packages/formz). Annotate one abstra
 
 ## Why not write it by hand
 
-You can. Every generated line below is plain `formz` code you could type yourself, and the first form you write that way takes ten minutes. The problem is that the cost is per field, not per form: every field is an enum, a class, two constructors, a validator, a state field, a `copyWith` parameter, an equality clause, an event class and a handler. A four-field profile screen is 150 lines of that; an eighteen-field onboarding flow is closer to 700, and every one of them has to be kept in sync by hand when a field is renamed or a rule changes. You already run `build_runner` for `freezed` and `json_serializable`, so the marginal cost of one more builder is a line in `pubspec.yaml`. What you get back is a form whose entire definition fits on one screen.
+You can. Every generated line below is plain `formz` code you could type yourself, and the first form you write that way takes ten minutes. The problem is that the cost is per field, not per form: every field is an enum, a class, two constructors, a validator, a state field, a `copyWith` parameter, an equality clause, an event class and a handler. A four-field profile screen is 150 lines of that; an eighteen-field onboarding flow is north of 500, and every one of them has to be kept in sync by hand when a field is renamed or a rule changes. You already run `build_runner` for `freezed` and `json_serializable`, so the marginal cost of one more builder is a line in `pubspec.yaml`. What you get back is a form whose entire definition fits on one screen.
 
 ## Before and after
 
@@ -83,6 +83,8 @@ dart run build_runner build
 
 Add `part 'profile_form.g.dart';` to the file that holds the annotated class.
 
+The output is written as `<file>.g.dart` by a `PartBuilder`, the same file `json_serializable` writes through the shared-part combiner. Keep `@FormzForm` classes in their own file; putting one next to a `@JsonSerializable` class in the same library makes `build_runner` stop with an output collision.
+
 ## What gets generated
 
 For `@FormzForm() abstract class ProfileForm` with a getter `String get handle`:
@@ -95,7 +97,9 @@ For `@FormzForm() abstract class ProfileForm` with a getter `String get handle`:
 | Cross-field getters (only for fields with `@SameAs`) | `confirmPasswordError`, `confirmPasswordDisplayError` |
 | Events and reducer (only with `events: true`) | `ProfileFormEvent`, `ProfileFormHandleChanged`, `ProfileFormState.apply` |
 
-Field types: `String`, `int`, `double`, `num`, `bool`, or a nullable version of them. Pure defaults are `''`, `0`, `0.0`, `0`, `false` and `null`.
+Field types: `String`, `int`, `double`, `num`, `bool`, or a nullable version of them. Pure defaults are `''`, `0`, `0.0`, `0`, `false` and `null`. Getters inherited from a superclass or mixin are included, in superclass, mixin, own order.
+
+Field names that the generated state already uses are rejected at build time: `error`, `other`, `inputs`, `isValid`, `isNotValid`, `isPure`, `isDirty`, `copyWith`, `apply`, `hashCode`, `runtimeType`, `toString`, `noSuchMethod`.
 
 ## Validators
 
@@ -111,7 +115,7 @@ Field types: `String`, `int`, `double`, `num`, `bool`, or a nullable version of 
 
 Arguments are copied into the generated code as written, so `@Matches(handlePattern)` references your constant instead of inlining it.
 
-`@Validate` takes a top-level function or a static method with the signature `bool Function(T value)`; the error member is named after it. Two validators on one field that produce the same error member (two `@Matches`, for example) are rejected at build time.
+`@Validate` takes a top-level function or a static method with the signature `bool Function(T value)`; the error member is named after the function, so renaming the function renames the enum member. The generator checks the reference at build time: it must return `bool` and accept the field's type as its only parameter. Two validators on one field that produce the same error member (two `@Matches`, or `@Validate(mismatch)` next to `@SameAs`) are rejected, as are `@NotEmpty`/`@MinLength`/`@MaxLength`/`@Matches` on non-`String` fields, `@Range` on non-`num` fields, and fractional `@Range` bounds on an `int` field.
 
 ## Cross-field validation
 
@@ -163,14 +167,31 @@ ProfileFormState apply(ProfileFormEvent event) {
     ProfileFormDisplayNameChanged(:final value) => copyWith(
       displayName: DisplayName.dirty(value),
     ),
-    ...
+    ProfileFormHandleChanged(:final value) => copyWith(
+      handle: Handle.dirty(value),
+    ),
+    ProfileFormAgeChanged(:final value) => copyWith(age: Age.dirty(value)),
+    ProfileFormBioChanged(:final value) => copyWith(bio: Bio.dirty(value)),
   };
 }
 ```
 
-`formz_gen` has no dependency on `bloc`; the wiring is one handler:
+`formz_gen` has no dependency on `bloc`; you compose `ProfileFormState` into your own state next to `FormzSubmissionStatus` (from `formz`) and the wiring is one handler:
 
 ```dart
+class ProfileState {
+  const ProfileState({
+    this.form = const ProfileFormState(),
+    this.status = FormzSubmissionStatus.initial,
+  });
+
+  final ProfileFormState form;
+  final FormzSubmissionStatus status;
+
+  ProfileState copyWith({ProfileFormState? form, FormzSubmissionStatus? status}) =>
+      ProfileState(form: form ?? this.form, status: status ?? this.status);
+}
+
 sealed class ProfileEvent {
   const ProfileEvent();
 }
@@ -190,7 +211,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<ProfileFieldChanged>(
       (e, emit) => emit(state.copyWith(form: state.form.apply(e.event))),
     );
-    on<ProfileSubmitted>(_onSubmitted);
+    on<ProfileSubmitted>((e, emit) {
+      if (state.form.isNotValid) return;
+      emit(state.copyWith(status: FormzSubmissionStatus.inProgress));
+    });
   }
 }
 ```
@@ -204,7 +228,7 @@ TextField(
 )
 ```
 
-Compose `ProfileFormState` into your own bloc state next to `FormzSubmissionStatus`; the generated state deliberately carries only the fields.
+The generated state deliberately carries only the fields.
 
 ## Scope
 

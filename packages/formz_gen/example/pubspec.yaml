@@ -3,6 +3,8 @@ publish_to: none
 
 environment:
   sdk: ^3.12.0
+# This example is a member of the repository's pub workspace. When copying it
+# into your own project, delete the next line and run `dart pub get`.
 resolution: workspace
 
 dependencies:

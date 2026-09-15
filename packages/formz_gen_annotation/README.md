@@ -1,24 +1,15 @@
 # formz_gen_annotation
 
-Annotations for [formz_gen](https://pub.dev/packages/formz_gen), the `build_runner` generator for [formz](https://pub.dev/packages/formz).
+Annotations for [formz_gen](https://pub.dev/packages/formz_gen), the `build_runner` generator for [formz](https://pub.dev/packages/formz). Pure Dart, no dependencies.
 
 ```yaml
 dependencies:
+  formz: ^0.8.1
   formz_gen_annotation: ^0.1.0
 
 dev_dependencies:
+  build_runner: ^2.4.0
   formz_gen: ^0.1.0
 ```
 
-| Annotation | Purpose |
-| --- | --- |
-| `@FormzForm({bool events = false})` | Marks an abstract class as a form definition |
-| `@NotEmpty()` | `value.isEmpty` → `empty` |
-| `@MinLength(n)` | `value.length < n` → `tooShort` |
-| `@MaxLength(n)` | `value.length > n` → `tooLong` |
-| `@Matches(pattern)` | `!RegExp(pattern).hasMatch(value)` → `invalid` |
-| `@Range(min: a, max: b)` | `value < a \|\| value > b` → `outOfRange` |
-| `@Validate(fn)` | `!fn(value)` → member named after `fn` |
-| `@SameAs(#other)` | `value != other.value`, evaluated on the form state → `mismatch` |
-
-See the `formz_gen` README for the generated output and bloc wiring.
+Exports `FormzForm`, `NotEmpty`, `MinLength`, `MaxLength`, `Matches`, `Range`, `SameAs` and `Validate`. What each one generates, the error member it produces and the build-time checks are documented in the [formz_gen README](https://pub.dev/packages/formz_gen).

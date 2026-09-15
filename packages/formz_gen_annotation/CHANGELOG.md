@@ -1,3 +1,3 @@
 ## 0.1.0
 
-- Initial release: `@FormzForm`, `@NotEmpty`, `@MinLength`, `@MaxLength`, `@Matches`, `@Range`, `@SameAs`, `@Validate`.
+- Initial release (pure Dart, no dependencies): `@FormzForm`, `@NotEmpty`, `@MinLength`, `@MaxLength`, `@Matches`, `@Range`, `@SameAs`, `@Validate`.
