@@ -28,6 +28,7 @@ const _pureValues = {
 const reservedFieldNames = {
   'error',
   'other',
+  'identical',
   'inputs',
   'isValid',
   'isNotValid',
@@ -53,7 +54,16 @@ FormSpec readForm(Element element, ConstantReader annotation) {
       _readField(getter),
   ];
   final names = fields.map((f) => f.name).toSet();
+  final generated = {
+    for (final f in fields) ...['${f.name}Error', '${f.name}DisplayError'],
+  };
   for (final field in fields) {
+    if (generated.contains(field.name)) {
+      throw InvalidGenerationSourceError(
+        '`${field.name}` collides with a generated member of the state.',
+        element: element,
+      );
+    }
     for (final target in field.sameAs) {
       if (!names.contains(target)) {
         throw InvalidGenerationSourceError(
@@ -74,19 +84,35 @@ List<GetterElement> _declaredAndInheritedGetters(ClassElement element) {
   final byName = <String, GetterElement>{};
   final supertype = element.supertype;
   if (supertype != null && !supertype.isDartCoreObject) {
-    final parent = supertype.element;
-    if (parent is ClassElement) {
-      for (final getter in _declaredAndInheritedGetters(parent)) {
-        byName[getter.name!] = getter;
-      }
+    for (final getter in _gettersOfType(supertype)) {
+      byName[getter.name!] = getter;
     }
   }
   for (final mixin in element.mixins) {
-    for (final getter in mixin.element.getters) {
+    for (final getter in mixin.getters) {
       if (!getter.isStatic) byName[getter.name!] = getter;
     }
   }
   for (final getter in element.getters) {
+    if (!getter.isStatic) byName[getter.name!] = getter;
+  }
+  return byName.values.toList();
+}
+
+List<GetterElement> _gettersOfType(InterfaceType type) {
+  final byName = <String, GetterElement>{};
+  final superclass = type.superclass;
+  if (superclass != null && !superclass.isDartCoreObject) {
+    for (final getter in _gettersOfType(superclass)) {
+      byName[getter.name!] = getter;
+    }
+  }
+  for (final mixin in type.mixins) {
+    for (final getter in mixin.getters) {
+      if (!getter.isStatic) byName[getter.name!] = getter;
+    }
+  }
+  for (final getter in type.getters) {
     if (!getter.isStatic) byName[getter.name!] = getter;
   }
   return byName.values.toList();

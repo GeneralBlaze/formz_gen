@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:formz_gen/src/form_spec.dart';
 import 'package:formz_gen/src/validator_spec.dart';
@@ -56,17 +57,22 @@ void rejectInvalidErrorMembers(FieldSpec field, GetterElement getter) {
 }
 
 void _requireString(DartType type, String annotation, GetterElement getter) {
-  if (type.isDartCoreString) return;
+  if (type.isDartCoreString && !_isNullable(type)) return;
   throw InvalidGenerationSourceError(
-    '$annotation requires a String field.',
+    '$annotation requires a non-nullable String field.',
     element: getter,
   );
 }
 
+bool _isNullable(DartType type) =>
+    type.nullabilitySuffix == NullabilitySuffix.question;
+
 void _checkRange(DartType type, DartObject value, GetterElement getter) {
-  if (!type.isDartCoreInt && !type.isDartCoreDouble && !type.isDartCoreNum) {
+  final isNum =
+      type.isDartCoreInt || type.isDartCoreDouble || type.isDartCoreNum;
+  if (!isNum || _isNullable(type)) {
     throw InvalidGenerationSourceError(
-      '@Range requires a num field.',
+      '@Range requires a non-nullable num field.',
       element: getter,
     );
   }
